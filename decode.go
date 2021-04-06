@@ -324,12 +324,16 @@ Switch:
 			}
 		}
 	case '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '-': // number
-		for ; i < len(data); i++ {
-			switch data[i] {
-			case '0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
-				'.', 'e', 'E', '+', '-':
-			default:
-				break Switch
+		if data[i-1] == '-' && len(data) >= i && data[i] == 'I' {
+			i += len("Infinity")
+		} else {
+			for ; i < len(data); i++ {
+				switch data[i] {
+				case '0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
+					'.', 'e', 'E', '+', '-':
+				default:
+					break Switch
+				}
 			}
 		}
 	case 't': // true
@@ -338,6 +342,10 @@ Switch:
 		i += len("alse")
 	case 'n': // null
 		i += len("ull")
+	case 'I': // Infinity
+		i += len("nfinity")
+	case 'N': // NaN
+		i += len("aN")
 	}
 	if i < len(data) {
 		d.opcode = stateEndValue(&d.scan, data[i])
@@ -962,7 +970,7 @@ func (d *decodeState) literalStore(item []byte, v reflect.Value, fromQuoted bool
 		}
 
 	default: // number
-		if c != '-' && (c < '0' || c > '9') {
+		if c != '-' && c != 'N' && c != 'I' && (c < '0' || c > '9') {
 			if fromQuoted {
 				return fmt.Errorf("json: invalid use of ,string struct tag, trying to unmarshal %q into %v", item, v.Type())
 			}

@@ -411,6 +411,10 @@ var unmarshalTests = []unmarshalTest{
 	{in: `true`, ptr: new(bool), out: true},
 	{in: `1`, ptr: new(int), out: 1},
 	{in: `1.2`, ptr: new(float64), out: 1.2},
+	{in: `-Infinity`, ptr: new(float64), out: math.Inf(-1)},
+	{in: `-Infinity`, ptr: new(float64), out: math.Inf(-1), useNumber: true},
+	{in: `Infinity`, ptr: new(float64), out: math.Inf(1)},
+	{in: `Infinity`, ptr: new(float64), out: math.Inf(1), useNumber: true},
 	{in: `-5`, ptr: new(int16), out: int16(-5)},
 	{in: `2`, ptr: new(Number), out: Number("2"), useNumber: true},
 	{in: `2`, ptr: new(Number), out: Number("2")},
@@ -973,7 +977,7 @@ var unmarshalTests = []unmarshalTest{
 		ptr: new(struct {
 			A Number `json:",string"`
 		}),
-		err: fmt.Errorf("json: invalid use of ,string struct tag, trying to unmarshal %q into json.Number", `invalid`),
+		err: fmt.Errorf("json: invalid use of ,string struct tag, trying to unmarshal %q into pyjson.Number", `invalid`),
 	},
 	{
 		in:  `{"A":"invalid"}`,
@@ -1171,6 +1175,46 @@ func TestUnmarshal(t *testing.T) {
 				continue
 			}
 		}
+	}
+}
+
+func TestUnmarshalNaN(t *testing.T) {
+	tt := unmarshalTest{in: `NaN`, out: math.NaN()}
+	var scan scanner
+	in := []byte(tt.in)
+	if err := checkValid(in, &scan); err != nil {
+		if !equalError(err, tt.err) {
+			t.Errorf("checkValid: %#v", err)
+			return
+		}
+	}
+
+	var v float64
+	dec := NewDecoder(bytes.NewReader(in))
+	err := dec.Decode(&v)
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+		return
+	}
+	if !math.IsNaN(v) {
+		t.Errorf("expected NaN, got %v", v)
+	}
+
+	// Check round trip also decodes correctly.
+	enc, err := Marshal(&v)
+	if err != nil {
+		t.Errorf("error re-marshaling: %v", err)
+		return
+	}
+
+	dec = NewDecoder(bytes.NewReader(enc))
+	err = dec.Decode(&v)
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+		return
+	}
+	if !math.IsNaN(v) {
+		t.Errorf("expected NaN, got %v", v)
 	}
 }
 
@@ -2284,7 +2328,7 @@ func TestUnmarshalEmbeddedUnexported(t *testing.T) {
 		in:  `{"R":2,"Q":1}`,
 		ptr: new(S1),
 		out: &S1{R: 2},
-		err: fmt.Errorf("json: cannot set embedded pointer to unexported struct: json.embed1"),
+		err: fmt.Errorf("json: cannot set embedded pointer to unexported struct: pyjson.embed1"),
 	}, {
 		// The top level Q field takes precedence.
 		in:  `{"Q":1}`,
@@ -2306,7 +2350,7 @@ func TestUnmarshalEmbeddedUnexported(t *testing.T) {
 		in:  `{"R":2,"Q":1}`,
 		ptr: new(S5),
 		out: &S5{R: 2},
-		err: fmt.Errorf("json: cannot set embedded pointer to unexported struct: json.embed3"),
+		err: fmt.Errorf("json: cannot set embedded pointer to unexported struct: pyjson.embed3"),
 	}, {
 		// Issue 24152, ensure decodeState.indirect does not panic.
 		in:  `{"embed1": {"Q": 1}}`,

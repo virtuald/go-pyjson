@@ -236,6 +236,12 @@ func stateBeginValue(s *scanner, c byte) int {
 	case 'f': // beginning of false
 		s.step = stateF
 		return scanBeginLiteral
+	case 'I': // beginning of Infinity
+		s.step = stateI
+		return scanBeginLiteral
+	case 'N': // beginning of NaN
+		s.step = stateNN
+		return scanBeginLiteral
 	case 'n': // beginning of null
 		s.step = stateN
 		return scanBeginLiteral
@@ -410,6 +416,10 @@ func stateNeg(s *scanner, c byte) int {
 		s.step = state1
 		return scanContinue
 	}
+	if c == 'I' {
+		s.step = stateI
+		return scanContinue
+	}
 	return s.error(c, "in numeric literal")
 }
 
@@ -577,6 +587,74 @@ func stateNul(s *scanner, c byte) int {
 		return scanContinue
 	}
 	return s.error(c, "in literal null (expecting 'l')")
+}
+
+// stateNN is the state after reading `N`.
+func stateNN(s *scanner, c byte) int {
+	if c == 'a' {
+		s.step = stateNa
+		return scanContinue
+	}
+	return s.error(c, "in literal NaN (expecting 'a')")
+}
+
+// stateNa is the state after reading `Na`.
+func stateNa(s *scanner, c byte) int {
+	if c == 'N' {
+		s.step = stateEndValue
+		return scanContinue
+	}
+	return s.error(c, "in literal NaN (expecting 'N')")
+}
+
+func stateI(s *scanner, c byte) int {
+	if c == 'n' {
+		s.step = stateIn
+		return scanContinue
+	}
+	return s.error(c, "in literal Infinity (expecting 'n'")
+}
+func stateIn(s *scanner, c byte) int {
+	if c == 'f' {
+		s.step = stateInf
+		return scanContinue
+	}
+	return s.error(c, "in literal Infinity (expecting 'f'")
+}
+func stateInf(s *scanner, c byte) int {
+	if c == 'i' {
+		s.step = stateInfi
+		return scanContinue
+	}
+	return s.error(c, "in literal Infinity (expecting 'i'")
+}
+func stateInfi(s *scanner, c byte) int {
+	if c == 'n' {
+		s.step = stateInfin
+		return scanContinue
+	}
+	return s.error(c, "in literal Infinity (expecting 'n'")
+}
+func stateInfin(s *scanner, c byte) int {
+	if c == 'i' {
+		s.step = stateInfini
+		return scanContinue
+	}
+	return s.error(c, "in literal Infinity (expecting 'i'")
+}
+func stateInfini(s *scanner, c byte) int {
+	if c == 't' {
+		s.step = stateInfinit
+		return scanContinue
+	}
+	return s.error(c, "in literal Infinity (expecting 't'")
+}
+func stateInfinit(s *scanner, c byte) int {
+	if c == 'y' {
+		s.step = stateEndValue
+		return scanContinue
+	}
+	return s.error(c, "in literal Infinity (expecting 'y'")
 }
 
 // stateError is the state after reaching a syntax error,

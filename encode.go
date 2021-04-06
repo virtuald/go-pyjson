@@ -574,8 +574,16 @@ type floatEncoder int // number of bits
 
 func (bits floatEncoder) encode(e *encodeState, v reflect.Value, opts encOpts) {
 	f := v.Float()
-	if math.IsInf(f, 0) || math.IsNaN(f) {
-		e.error(&UnsupportedValueError{v, strconv.FormatFloat(f, 'g', -1, int(bits))})
+	if math.IsNaN(f) {
+		e.WriteString("NaN")
+		return
+	} else if math.IsInf(f, 0) {
+		if math.IsInf(f, -1) {
+			e.WriteString("-Infinity")
+		} else {
+			e.WriteString("Infinity")
+		}
+		return
 	}
 
 	// Convert as if by ES6 number to string conversion.

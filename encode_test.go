@@ -223,9 +223,9 @@ func TestSliceNoCycle(t *testing.T) {
 }
 
 var unsupportedValues = []interface{}{
-	math.NaN(),
-	math.Inf(-1),
-	math.Inf(1),
+	// math.NaN(),
+	// math.Inf(-1),
+	// math.Inf(1),
 	pointerCycle,
 	pointerCycleIndirect,
 	mapCycle,
@@ -243,6 +243,42 @@ func TestUnsupportedValues(t *testing.T) {
 			t.Errorf("for %v, expected error", v)
 		}
 	}
+}
+
+func TestNanInf(t *testing.T) {
+	b, err := Marshal(math.NaN())
+	if err != nil {
+		t.Errorf("expected no error, got %v", err)
+	} else if string(b) != "NaN" {
+		t.Errorf("expected NaN, got %v", b)
+	}
+
+	b, err = Marshal(math.Inf(1))
+	if err != nil {
+		t.Errorf("expected no error, got %v", err)
+	} else if string(b) != "Infinity" {
+		t.Errorf("expected Infinity, got %v", b)
+	}
+
+	b, err = Marshal(math.Inf(-1))
+	if err != nil {
+		t.Errorf("expected no error, got %v", err)
+	} else if string(b) != "-Infinity" {
+		t.Errorf("expected -Infinity, got %v", b)
+	}
+
+	type T struct {
+		NaN float64
+	}
+
+	tv := T{math.NaN()}
+	b, err = Marshal(tv)
+	if err != nil {
+		t.Errorf("expected no error, got %v", err)
+	} else if string(b) != "{\"NaN\":NaN}" {
+		t.Errorf("expected NaN, got %v", string(b))
+	}
+
 }
 
 // Ref has Marshaler and Unmarshaler methods with pointer receiver.
